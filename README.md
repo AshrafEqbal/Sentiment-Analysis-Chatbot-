@@ -143,11 +143,8 @@ These enhancements exceed the Tier 2 bonus expectations.
 # **Repository Structure**
 
 ```
-/backend
-   main.py
-/frontend
-   index.html
-   (JS embedded inside)
+main.py (backend script)
+index.html (frontend script)
 README.md
 ```
 
