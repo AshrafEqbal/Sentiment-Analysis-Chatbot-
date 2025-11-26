@@ -46,7 +46,7 @@
     }
 
     #inputBox {
-        width: 100%;
+        width: 85%;
         padding: 12px;
         margin-top: 10px;
         border-radius: 8px;
@@ -79,9 +79,9 @@
 <div class="container">
     <!-- LEFT PANEL -->
     <div class="panel">
+	<h3>Hello How Can I Help You</h3>
         <div id="chatArea" class="scroll"></div>
-
-        <input id="inputBox" placeholder="Write a message...">
+        <input id="inputBox" placeholder="Write a message..." onkeydown="handleEnter(event)">
         <button onclick="sendMessage()">Send</button>
     </div>
 
@@ -252,6 +252,12 @@ function updateTags() {
             ${sentimentEmoji(s.sentiment)} ${s.emotion}
         </span>`
     ).join("");
+}
+function handleEnter(event) {
+    if (event.key === "Enter") {
+        event.preventDefault(); // prevent new line in input
+        sendMessage();
+    }
 }
 </script>
 
