@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Chat & Mood Assistant</title>
+<style>
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: linear-gradient(180deg, #f7fbff, #ffffff);
+    }
+
+    .container {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 20px;
+        padding: 20px;
+    }
+
+    .panel {
+        background: white;
+        padding: 15px;
+        border-radius: 12px;
+        box-shadow: 0 4px 18px rgba(13,38,59,0.06);
+    }
+
+    .scroll {
+        max-height: 600px;
+        overflow-y: auto;
+        padding-right: 8px;
+    }
+
+    .user-bubble {
+        background: linear-gradient(90deg,#f3f6fb,#eef6ff);
+        border-radius: 12px;
+        padding: 10px;
+        margin-bottom: 10px;
+    }
+
+    .bot-bubble {
+        background: linear-gradient(90deg,#fff8e8,#f0fbef);
+        border-radius: 12px;
+        padding: 10px;
+        margin-left: 25px;
+        margin-bottom: 20px;
+    }
+
+    #inputBox {
+        width: 100%;
+        padding: 12px;
+        margin-top: 10px;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+    }
+    button {
+        margin-top: 8px;
+        padding:10px 18px;
+        border: none;
+        border-radius: 8px;
+        background:#4b8df5;
+        color:white;
+        cursor:pointer;
+    }
+
+    .tag {
+        display:inline-block;
+        padding:4px 8px;
+        border-radius:999px;
+        font-size:12px;
+        color:white;
+        margin-right:6px;
+    }
+</style>
+</head>
+
+<body>
+<h1 style="text-align:center;margin:10px 0;">Chat & Mood Assistant</h1>
+
+<div class="container">
+    <!-- LEFT PANEL -->
+    <div class="panel">
+        <div id="chatArea" class="scroll"></div>
+
+        <input id="inputBox" placeholder="Write a message...">
+        <button onclick="sendMessage()">Send</button>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="panel">
+        <h3>Mood Over Time</h3>
+        <canvas id="moodChart" width="320" height="180"></canvas>
+
+        <h3>Summary</h3>
+        <div id="summary"></div>
+
+        <h3>Recent Tags</h3>
+        <div id="recentTags"></div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+const API_URL = "http://localhost:8000/gemini";
+
+let conversation = [];
+let sentiments = [];
+let overallScore = 0;
+
+function sentimentEmoji(s) {
+    return {positive:"😊", neutral:"😐", negative:"☹️"}[s] || "😐";
+}
+function sentimentColor(s) {
+    return {positive:"green", neutral:"gray", negative:"red"}[s] || "gray";
+}
+
+async function callGemini(prompt) {
+    const res = await fetch(API_URL, {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({ prompt })
+    });
+    const data = await res.json();
+    return data.text || "";
+}
+
+async function analyzeSentiment(message) {
+    const prompt = `
+Return ONLY JSON:
+
+{
+"sentiment":"positive|negative|neutral",
+"score":1|0|-1,
+"emotion":"word",
+"explanation":"reason"
+}
+
+Message: "${message}"
+`;
+
+    let text = await callGemini(prompt);
+
+    try {
+        // extract JSON
+        let jsonMatch = text.match(/\{[\s\S]*\}/);
+        let parsed = JSON.parse(jsonMatch[0]);
+        return parsed;
+    } catch {
+        return {sentiment:"neutral", score:0, emotion:"unknown", explanation:"N/A"};
+    }
+}
+
+async function generateReply(message) {
+    let convoTxt = conversation.map(c => `User:${c.user}\nBot:${c.bot}`).join("\n");
+    let prompt = `
+You are a friendly assistant. Do NOT mention emotions.
+
+Conversation:
+${convoTxt}
+
+User: ${message}
+Bot:
+`;
+    return await callGemini(prompt);
+}
+
+async function sendMessage() {
+    let msg = document.getElementById("inputBox").value.trim();
+    if (!msg) return;
+
+    document.getElementById("inputBox").value = "";
+
+    // show user bubble immediately
+    addMessage("user", msg, {sentiment:"neutral", emotion:"", explanation:""});
+
+    const reply = await generateReply(msg);
+    const senti = await analyzeSentiment(msg);
+
+    conversation.push({ user: msg, bot: reply });
+    sentiments.push(senti);
+    overallScore += senti.score;
+
+    addMessage("bot", reply);
+
+    updateChart();
+    updateSummary();
+    updateTags();
+}
+
+function addMessage(type, text, senti) {
+    const chat = document.getElementById("chatArea");
+
+    if (type === "user") {
+        chat.innerHTML += `
+        <div class="user-bubble">
+            <b>You</b>
+            <span style="float:right;">${sentimentEmoji(senti.sentiment)}</span>
+            <div style="margin-top:8px;">${text}</div>
+            <div style="color:#666;font-size:12px;">
+                ${senti.emotion ? `Tag: <span style="color:${sentimentColor(senti.sentiment)}">${senti.emotion}</span> • ${senti.explanation}` : ""}
+            </div>
+        </div>`;
+    } else {
+        chat.innerHTML += `
+        <div class="bot-bubble">
+            <b>Assistant</b>
+            <div style="margin-top:8px;">${text}</div>
+        </div>`;
+    }
+
+    chat.scrollTop = chat.scrollHeight;
+}
+
+let chart;
+function updateChart() {
+    const ctx = document.getElementById("moodChart");
+
+    const data = sentiments.map(s => s.score);
+
+    if (!chart) {
+        chart = new Chart(ctx, {
+            type: "line",
+            data: {
+                labels: data.map((_, i) => i+1),
+                datasets: [{
+                    label:"Mood",
+                    data,
+                    borderColor:"#4b8df5",
+                    borderWidth:2,
+                    fill:false
+                }]
+            },
+            options:{scales:{y:{min:-1,max:1}}}
+        });
+    } else {
+        chart.data.labels = data.map((_, i) => i+1);
+        chart.data.datasets[0].data = data;
+        chart.update();
+    }
+}
+
+function updateSummary() {
+    const div = document.getElementById("summary");
+    let mood =
+        overallScore > 0 ? "Mostly Positive 😊" :
+        overallScore < 0 ? "Mostly Negative ☹️" :
+        "Neutral 😐";
+
+    div.innerHTML = `<b>Overall:</b> ${mood}`;
+}
+
+function updateTags() {
+    const div = document.getElementById("recentTags");
+    let last = sentiments.slice(-6);
+
+    div.innerHTML = last.map(s =>
+        `<span class="tag" style="background:${sentimentColor(s.sentiment)};">
+            ${sentimentEmoji(s.sentiment)} ${s.emotion}
+        </span>`
+    ).join("");
+}
+</script>
+
+</body>
+</html>
