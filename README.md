@@ -152,14 +152,14 @@ README.md
 
 # **Tests**
 
-*All features were manually tested and verified to work correctly:*
-*Chatbot response generation
-*Statement-level sentiment analysis for each message
-*Conversation-level sentiment summary
-*Mood chart and emotion tags updates
-*Error handling for invalid input or API issues
+* All features were manually tested and verified to work correctly:*
+* Chatbot response generation
+* Statement-level sentiment analysis for each message
+* Conversation-level sentiment summary
+* Mood chart and emotion tags updates
+* Error handling for invalid input or API issues
 
-*No automated tests are included, but manual testing confirms full functionality.*
+* No automated tests are included, but manual testing confirms full functionality.*
 
 ---
 
