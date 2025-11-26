@@ -167,25 +167,19 @@ Bot:
 async function sendMessage() {
     let msg = document.getElementById("inputBox").value.trim();
     if (!msg) return;
-
     document.getElementById("inputBox").value = "";
-
-    // show user bubble immediately
-    addMessage("user", msg, {sentiment:"neutral", emotion:"", explanation:""});
-
-    const reply = await generateReply(msg);
     const senti = await analyzeSentiment(msg);
-
+    addMessage("user", msg, senti);
+    const reply = await generateReply(msg);
     conversation.push({ user: msg, bot: reply });
     sentiments.push(senti);
     overallScore += senti.score;
-
     addMessage("bot", reply);
-
     updateChart();
     updateSummary();
     updateTags();
 }
+
 
 function addMessage(type, text, senti) {
     const chat = document.getElementById("chatArea");
