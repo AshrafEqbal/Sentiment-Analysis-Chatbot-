@@ -4,7 +4,7 @@ import google.generativeai as genai
 from fastapi.middleware.cors import CORSMiddleware
 
 # Configure
-genai.configure(api_key="AIzaSyD42OtCpFptg7qrN0Zs2GNLa6h83_p55ts")
+genai.configure(api_key="AIzaSyD42OtCpFptg7qrN0Zs2GNLa6h83_p55ts") #genai.configure(api_key="YOUR_API_KEY_HERE")
 MODEL = "models/gemini-2.5-flash"
 
 app = FastAPI()
@@ -25,3 +25,4 @@ async def run_gemini(req: Prompt):
     model = genai.GenerativeModel(MODEL)
     response = model.generate_content(req.prompt)
     return {"text": response.text}
+
